@@ -154,7 +154,7 @@ if __name__ == "__main__":
                    MODE="qtable"
                 if event.key == pygame.K_r:
                    cart.x=400
-                   cart.alpha=cart.dalpha_dt=cart.dalpha_dt=0
+                   cart.alpha=cart.dalpha_dt=cart.dalpha_d2t=0
                    cart.v=cart.a=cart.control=0
 
         if MODE=="auto":
