@@ -1,4 +1,4 @@
-#S. Diane, 2024
+#S. Diane, 2024-2025
 
 #1 импорт библиотек, задание констант и вспомогательных функций
 import math, pygame, sys, numpy as np
