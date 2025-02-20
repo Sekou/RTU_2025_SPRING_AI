@@ -1,5 +1,6 @@
 import pygame, sys, math, numpy as np
 winSize=(800,600)
+SURFACE_Y=winSize[1]*2/3
 
 pygame.font.init()
 def drawText(screen, x, y, text, sz=25):
@@ -12,6 +13,14 @@ def discretize(val, ranges, vals):
         if r[0]<=val<r[1]:
             return vals[i]
 
+def draw_plot(screen, vals, vmin, vmax):
+    for i in range(1, len(vals)):
+        v1, v2=vals[i-1], vals[i]
+        DY=SURFACE_Y-600
+        k=DY/(vmax-vmin)
+        pygame.draw.line(screen, (0,0,255), (i-1, 600+k*v1), (i, 600+k*v2))
+
+
 class Cart:
     def __init__(self):
         self.x,self.v,self.a=winSize[0]/2, 0,0 #положение, скорость, ускорение
@@ -22,7 +31,7 @@ class Cart:
         self.dalpha_d2t=0 #ускорение падения
         self.barL=70 #длина балки
     def draw(self, screen):
-        y=winSize[1]*2/3
+        y=SURFACE_Y
         pygame.draw.line(screen, (0,0,0),(0,y), (winSize[0],y), 1)
         self.y=y-25
         w,h=60,35
@@ -58,7 +67,6 @@ class Cart:
         elif self.alpha>0.01:
             self.control=-100
             if dxCart<0 and abs(self.alpha)>0.3:  self.control+= 0.1*dxCart
-
         else:
             self.control=0
 
@@ -92,7 +100,7 @@ class History:
     def query(self, s, a):
         rr=[r for r in self.records if r[1]==s and r[2]==a]
         return rr
-    def calcQ(self, s, a, horizon=10):
+    def calcQ(self, s, a, horizon=20):
         rr=self.query(s, a)
         if len(rr)==0: return 0.5
         qq=[]
@@ -106,6 +114,13 @@ class History:
                 q += discount * self.records[i][-1]
             qq.append(q)
         return np.mean(qq)
+    def save(self, filename):
+        with open(filename, "w") as f:
+            f.write(str(self.records))
+    def read(self, filename):
+        with open(filename, "r") as f:
+            self.records=eval(f.read())
+
 
 if __name__ == "__main__":
     cart=Cart()
@@ -119,13 +134,19 @@ if __name__ == "__main__":
 
     MODE="manual" #or "auto"
 
+    qq=[]
+
     while True:
 
         xDiscr=discretize(cart.x, [[0,350],[350,450],[450,800]], [0, 1, 2])
         alphaDiscr=discretize(cart.alpha, [[-math.pi/2,-0.03],[-0.03,0.03],[0.03,math.pi/2]], [0, 1, 2])
         state = 10 * xDiscr + alphaDiscr
         action=discretize(cart.v, [[-300,-20],[-20,20],[20,300]], [0, 1, 2])
-        reward=1/(5*abs(cart.alpha)+1)
+        reward = 1 / (5*abs(cart.alpha)+1) + 1 / (abs(400-cart.x)+1)
+
+        estimated_q=0
+        if len(history.records):
+            estimated_q=history.calcQ(state, action)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -137,33 +158,45 @@ if __name__ == "__main__":
                     cart.control=100
                 if event.key == pygame.K_m:
                     MODE="auto" if MODE=="manual" else "manual"
-                if event.key == pygame.K_1:
+                if event.key == pygame.K_1: #тест запроса к исторической таблице по паре состояние-действие
                     historySubset=history.query(11, 2)
                     print(historySubset)
-                if event.key == pygame.K_2:
+                if event.key == pygame.K_2: #тест расчета интегральной оценки эффективности пары состояние-действие
                     Q=history.calcQ(11, 2)
                     print(Q)
-                if event.key == pygame.K_3:
+                if event.key == pygame.K_3: #расчет оценок по всем комбинациям состояние-действие
                     #TODO: автоматизировать формирование комбинаций
                     qtable.createPolicy(history, [0, 1, 2, 10, 11, 12, 20,21,22], [0, 1, 2])
                     print(qtable.policy)
-                if event.key == pygame.K_4:
+                if event.key == pygame.K_4: #подвыборка действий, доступных для указанного состояния
                     actionsSubset=qtable.query(state)
                     print(actionsSubset)
-                if event.key == pygame.K_5:
+                if event.key == pygame.K_5: #переключение в режим автоматического движения по выученной таблице оценок
                    MODE="qtable"
-                if event.key == pygame.K_r:
+                if event.key == pygame.K_r: #сбрасываем робота в удобное положение по центру экрана
                    cart.x=400
                    cart.alpha=cart.dalpha_dt=cart.dalpha_d2t=0
                    cart.v=cart.a=cart.control=0
+                   qq=[]
+                if event.key == pygame.K_i: #вывод информации
+                   print("Сперва отклоните тележку и дайте ей поездить в экспертном режиме через кнопку M")
+                   print("Далее, когда накопится достаточно историческеих записей, запустите формирование таблицы-политики через кнопку 3")
+                   print("Переместите робота в центр экрана кнопеой R, и немного отклоните")
+                   print("Запустите режим движения по таблице-политики кнопкой 5")
+                if event.key == pygame.K_s: #сохранение истории движений робота в файл
+                    history.save("history.txt")
+                if event.key == pygame.K_l: #загрузка истории движений робота из файла
+                    history.read("history.txt")
 
-        if MODE=="auto":
+        state=xDiscr*10+alphaDiscr
+
+        if MODE=="manual":
+            history.addRecord(state, action, reward)
+        elif MODE=="auto":
             cart.controlExpert()
-            s=xDiscr*10+alphaDiscr
-            history.addRecord(s, action, reward)
-        if MODE=="qtable":
-            a=qtable.selectAction(s)
-            print(s, "->", a)
+        elif MODE=="qtable":
+            a=qtable.selectAction(state)
+            print(state, "->", a)
             if a==0:
                 cart.control = -100
             if a==1:
@@ -173,26 +206,32 @@ if __name__ == "__main__":
 
         cart.sim(dt)
         screen.fill((255,255,255))
-        #1
+        #1 координата тележки
         drawText(screen, 5, 5, f"x={cart.x:.1f}")
-        #2
+        #2 дискретное состояние по координате тележки
         drawText(screen, 5, 25, f"x*={xDiscr}")
-        #3
+        #3 угол балки (маятника)
         drawText(screen, 5, 45, f"alpha={cart.alpha:.2f}")
-        #4
+        #4 дискртеное состояние угла балки
         drawText(screen, 5, 65, f"alpha*={alphaDiscr}")
-        #5
+        #5 дискретизированное действие
         drawText(screen, 5, 85, f"action*={action}")
-        #6
+        #6 сиюминутное подкрепление
         drawText(screen, 5, 105, f"reward={reward:.2f}")
-        #7
+        #7 число записей в исторической таблице
         drawText(screen, 5, 125, f"numRecords={len(history.records)}")
-        #8
+        #8 обобщенное состояние, составленное из координаты тележки x и угла балки alpha
         drawText(screen, 5, 145, f"state={state}")
+        #9 оценка достоверности для выполняемого вручную или автоматически действия
+        drawText(screen, 5, 165, f"estQ={estimated_q:.2f}")
+
+        qq.append(estimated_q)
+        draw_plot(screen, qq, 0, 3)
 
         cart.draw(screen)
         pygame.display.flip()
         timer.tick(fps)
+
 
         #
         # k = abs(self.alpha)
