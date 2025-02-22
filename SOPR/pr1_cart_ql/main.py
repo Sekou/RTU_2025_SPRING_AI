@@ -1,6 +1,6 @@
-from typing import re
-
+#S. Diane, 2025
 import pygame, sys, math, numpy as np
+
 winSize=(800,600)
 SURFACE_Y=winSize[1]*2/3
 
@@ -11,31 +11,26 @@ def drawText(screen, x, y, text, sz=25):
     font = pygame.font.SysFont('Comic Sans MS', sz)
     screen.blit(font.render(text,  False, (0, 0, 0)), (x, y))
 
-#[[0,350],[350,450],[450,800]], [0, 1, 2]
 def discretize(val, ranges, vals):
     for i, r in enumerate(ranges):
-        if r[0]<=val<r[1]:
-            return vals[i]
+        if r[0]<=val<r[1]: return vals[i]
+    return -1
 
 def draw_plot(screen, vals, vmin, vmax, scale, color=(0,0,255)):
     for i in range(1, len(vals)):
-        v1, v2=vals[i-1], vals[i]
-        k=-scale/(vmax-vmin)
-        pygame.draw.line(screen, color, (i-1, 600+k*v1), (i, 600+k*v2))
+        v1, v2, k=vals[i-1], vals[i], -scale/(vmax-vmin)
+        pygame.draw.line(screen, color, (i-1, winSize[1]+k*v1), (i, winSize[1]+k*v2))
 
 class Cart:
     def __init__(self):
-        self.x,self.v,self.a=winSize[0]/2, 0,0 #положение, скорость, ускорение
+        self.x, self.y, self.v,self.a=winSize[0]/2, SURFACE_Y-25, 0, 0 #положение, скорость, ускорение
         self.control=0
-        self.y=0
         self.alpha=0.01 #угол балки
         self.dalpha_dt=0 #скорость падения
         self.dalpha_d2t=0 #ускорение падения
         self.barL=70 #длина балки
     def draw(self, screen):
-        y=SURFACE_Y
-        pygame.draw.line(screen, (0,0,0),(0,y), (winSize[0],y), 1)
-        self.y=y-25
+        pygame.draw.line(screen, (0,0,0),(0,SURFACE_Y), (winSize[0],SURFACE_Y), 1)
         w,h=60,35
         x1,x2=self.x-w/2, self.x+w/2
         y1,y2=self.y-h/2, self.y+h/2
@@ -49,11 +44,9 @@ class Cart:
         barX2, barY2 = barX+self.barL*c, barY-self.barL*s
         pygame.draw.line(screen, (0,0,0),(barX, barY), (barX2, barY2), 1)
     def sim(self, dt):
-
-        self.a=0.9*self.control
+        self.a=90*self.control
         self.v+=self.a * dt
         self.x += self.v * dt
-
         self.dalpha_d2t=0.9*self.alpha + 0.01*self.a
         self.dalpha_dt+=self.dalpha_d2t * dt
         self.alpha += self.dalpha_dt * dt
@@ -78,11 +71,9 @@ class QTable:
             for av in actionsVariants:
                 q, _=history.calcQ(sv, av)
                 self.policy[f"{sv}+{av}"]=round(q, 2)
-
     def query(self, s):
         res=[[key,self.policy[key]] for key in self.policy.keys() if key.startswith(str(s)+"+")]
         return res
-
     def selectAction(self, s):
         variants=self.query(s)
         if len(variants)==0: return 1 #TODO: fix magic number
@@ -122,13 +113,16 @@ class History:
                 norm+=discount
             qq.append(q/norm)
         info+=f", {breaks} breaks"
-        return np.mean(qq), info
+        return float(np.mean(qq)), info
     def save(self, filename):
         with open(filename, "w") as f:
             f.write(str(self.records))
     def read(self, filename):
         with open(filename, "r") as f:
             self.records=eval(f.read())
+    def clear(self):
+        self.records.clear()
+
 
 qq=[]
 rr=[]
@@ -144,7 +138,7 @@ def reset():
 
 if __name__ == "__main__":
     cart=Cart()
-    last_x=cart.x
+    last_x, sel_action = cart.x, None
 
     fps=30
     dt=1/fps
@@ -161,8 +155,8 @@ if __name__ == "__main__":
         vDiscr=discretize(cart.v, [[-500,-10],[-10,10],[10,500]], [0, 1, 2])
         alphaDiscr=discretize(cart.alpha, [[-MAX_ANG,-0.03],[-0.03,0.03],[0.03,MAX_ANG]], [0, 1, 2])
         dalphaDiscr=discretize(cart.dalpha_dt, [[-10*MAX_ANG,-0.1],[-0.1,0.1],[0.1,MAX_ANG*10]], [0, 1, 2])
-        state = 1000 * xDiscr + 100*vDiscr+10*alphaDiscr+dalphaDiscr
-        action=discretize(cart.control, [[-300,-20],[-20,20],[20,300]], [0, 1, 2])
+        state = int(np.dot([1000,100,10,1],[xDiscr, vDiscr, alphaDiscr, dalphaDiscr]))
+        action = discretize(cart.control, [[-5,-0.1],[-0.1,0.1],[0.1,5]], [0, 1, 2])
         reward = 2 / (5*abs(cart.alpha)+1) + 1 / (abs(400-cart.x)+1)
 
         estimated_q=0
@@ -172,31 +166,31 @@ if __name__ == "__main__":
 
         DRAW=True
 
-
         if MODE=="manual":
             if cart.x!=last_x:
                 history.addRecord(state, action, round(reward, 2))
                 last_x=cart.x
         elif MODE=="auto":
             cart.controlExpert()
+        elif MODE=="learn":
+            history.addRecord(state, action, round(reward, 2))
+            if sel_action==None or np.random.random()<0.1:
+                sel_action=np.random.randint(3)
+                print(f"Trying: {state:<04} -> {sel_action}")
+            cart.control = [-1,0,1][sel_action]
         elif MODE=="qtable":
-            a=qtable.selectAction(state)
-            print(f"{state:<04} -> {a}")
-            if a==0:
-                cart.control = -100
-            if a==1:
-                cart.control = 0
-            if a==2:
-                cart.control = 100
+            sel_action=qtable.selectAction(state)
+            print(f"Using: {state:<04} -> {sel_action}")
+            cart.control = [-1,0,1][sel_action]
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit(0)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
-                    cart.control=-100
+                    cart.control=-1
                 if event.key == pygame.K_d:
-                    cart.control=100
+                    cart.control=1
                 if event.key == pygame.K_z:
                     cart.control=0
                 if event.key == pygame.K_m:
@@ -220,6 +214,8 @@ if __name__ == "__main__":
                     print(actionsSubset)
                 if event.key == pygame.K_5: #переключение в режим автоматического движения по выученной таблице оценок
                    MODE="qtable"
+                if event.key == pygame.K_6: #переключение в режим автоматического обучения
+                   MODE="learn"
                 if event.key == pygame.K_r: #сбрасываем робота в удобное положение по центру экрана
                     reset()
                     history.addEmptyRecord()
@@ -233,11 +229,15 @@ if __name__ == "__main__":
                     history.save("history.txt")
                 if event.key == pygame.K_l: #загрузка истории движений робота из файла
                     history.read("history.txt")
+                if event.key == pygame.K_c: #очистка истории
+                    history.clear()
 
         cart.sim(dt)
 
         if cart.x<=0 or cart.x>=800 or abs(cart.alpha)*1.01>MAX_ANG:
             reset()
+            if MODE in ["manual", "learn"]:
+                history.addEmptyRecord()
             DRAW=False
 
         if DRAW:
@@ -262,6 +262,8 @@ if __name__ == "__main__":
             drawText(screen, 5, 165, f"estQ={estimated_q:.2f}")
             #10 информация об оценке
             drawText(screen, 5, 185, f"Q info = {info}")
+            #11 информация о режиме работы
+            drawText(screen, 5, 205, f"mode = {MODE}")
             qq.append(estimated_q)
             rr.append(reward)
             draw_plot(screen, qq, 0, 3, 600-SURFACE_Y, (0,0,255))
@@ -277,15 +279,15 @@ if __name__ == "__main__":
         # elif self.alpha > 0.01:
         #     self.control = -100 + 0.1 * dxCart * k
 
-#fix reward //account for dalpha_dt
+#fix reward //account for alpha and x //dalpha_dt   !!!!!!!!
 #fix horizon
 #increase samples count in history
-#filter samples count in history
-#a = v?
-#skip resets for calc Q
-#random resets positions for variations in learning
-#normailze Q
-#не добавлять лишние записи при остановках
+#+ filter samples count in history
+#+ a = v? - better a=control   !!!!!!
+#+ skip resets for calc Q
+#+ random resets positions for variations in learning   !!!!!
+#+ normailze Q
+#+ не добавлять лишние записи при остановках   !!!!!!!!!!
 
 
 
