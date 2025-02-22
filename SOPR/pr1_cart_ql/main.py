@@ -6,7 +6,8 @@ WIN_SIZE=(800, 600)
 SURFACE_Y= WIN_SIZE[1] * 2 / 3
 MAX_ANG = 1
 DISCOUNT = 0.99
-HORIZON = 100
+# HORIZON = 25
+HORIZON = 125
 
 pygame.font.init()
 def draw_text(screen, x, y, text, sz=25):
@@ -165,8 +166,6 @@ if __name__ == "__main__":
         if len(history.records):
             estimated_q, info= history.calc_q(state, action)
 
-        need_draw=True
-
         if mode== "manual":
             if cart.x!=last_x:
                 history.add_record(state, action, round(reward, 2))
@@ -184,48 +183,44 @@ if __name__ == "__main__":
             print(f"Using: {state:<04} -> {sel_action}")
             cart.control = [-1,0,1][sel_action]
 
+        need_draw=True
+
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit(0)
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.QUIT: sys.exit(0)
+            elif event.type == pygame.KEYDOWN:
                 manual_control={pygame.K_a: -1,pygame.K_d: 1,pygame.K_z: 0}
-                if event.key in manual_control:
-                    cart.control=manual_control[event.key]
-                if event.key == pygame.K_m:
-                    mode= "auto" if mode == "manual" else "manual"
-                if event.key == pygame.K_1: #тест запроса к исторической таблице по паре состояние-действие
+                if event.key in manual_control: cart.control=manual_control[event.key]
+                elif event.key == pygame.K_m: mode= "auto" if mode == "manual" else "manual"
+                elif event.key == pygame.K_1: #тест запроса к исторической таблице по паре состояние-действие
                     historySubset=history.query(11, 2)
                     print(historySubset)
-                if event.key == pygame.K_2: #тест расчета интегральной оценки эффективности пары состояние-действие
+                elif event.key == pygame.K_2: #тест расчета интегральной оценки эффективности пары состояние-действие
                     Q, _ = history.calc_q(11, 2)
                     print(Q)
-                if event.key == pygame.K_3: #расчет оценок по всем комбинациям состояние-действие
+                elif event.key == pygame.K_3: #расчет оценок по всем комбинациям состояние-действие
                     s0 = set((0, 1, 2))
                     s1 = product(s0, repeat=4)
                     state_variants=[np.dot(v, [1000,100,10,1]) for v in s1]
                     qtable.create_policy(history, state_variants, [0, 1, 2])
                     print(qtable.policy)
-                if event.key == pygame.K_4: #подвыборка действий, доступных для указанного состояния
+                elif event.key == pygame.K_4: #подвыборка действий, доступных для указанного состояния
                     actionsSubset=qtable.query(state)
                     print(actionsSubset)
-                if event.key == pygame.K_5: #переключение в режим автоматического Q-обучения
-                   mode= "learn"
-                if event.key == pygame.K_6: #переключение в режим автоматического движения по выученной таблице оценок
-                   mode= "qtable"
-                if event.key == pygame.K_r: #сбрасываем робота в удобное положение по центру экрана
+                elif event.key == pygame.K_5: mode= "learn" #переключение в режим автоматического Q-обучения
+                elif event.key == pygame.K_6: mode= "qtable" #переключение в режим автоматического движения по выученной таблице оценок
+                elif event.key == pygame.K_r: #сбрасываем робота в удобное положение по центру экрана
                     reset()
                     history.add_empty_record()
                     need_draw=False
-                if event.key == pygame.K_i: #вывод информации
+                elif event.key == pygame.K_i: #вывод информации
                    print("Кнопка 5 - авто-обучение тележки (накопление исторических записей)")
                    print("Кнопка 3 - расчет таблицы политики Q(s, a)")
                    print("Кнопка 6 - режим движения по таблице-политики")
-                if event.key == pygame.K_s: #сохранение истории движений робота в файл
-                    history.save("history.txt")
-                if event.key == pygame.K_l: #загрузка истории движений робота из файла
-                    history.read("history.txt")
-                if event.key == pygame.K_c: #очистка истории
-                    history.clear()
+                elif event.key == pygame.K_s: history.save("history.txt") #сохранение истории движений робота в файл
+                elif event.key == pygame.K_l: history.read("history.txt") #загрузка истории движений робота из файла
+                elif event.key == pygame.K_j: history.read("history5000.txt") #загрузка истории движений робота из файла
+                elif event.key == pygame.K_c: history.clear() #очистка истории
+
 
         cart.simulate(dt)
 
@@ -241,14 +236,14 @@ if __name__ == "__main__":
             #отрисовка тележки с маятником
             cart.draw(screen)
 
-            #1 координата тележки
-            draw_text(screen, 5, 5, f"x={cart.x:.1f}")
-            #2 скорость тележки
-            draw_text(screen, 5, 25, f"dx_dt={cart.v:.1f}")
-            #3 угол балки (маятника)
-            draw_text(screen, 5, 45, f"alpha={cart.alpha:.2f}")
-            #4 угловая скорость балки
-            draw_text(screen, 5, 65, f"dalpha_dt={cart.dalpha_dt:.2f}")
+            #1 горизонт прогноза
+            draw_text(screen, 5, 5, f"horizon = {HORIZON}")
+            #2 фактор дисконтирования
+            draw_text(screen, 5, 25, f"discount = {DISCOUNT:.3f}")
+            #3 координата и скорость тележки
+            draw_text(screen, 5, 45, f"x={cart.x:.1f}, dx_dt={cart.v:.1f}")
+            #4 угол и угловая скорость балки
+            draw_text(screen, 5, 65, f"alpha={cart.alpha:.2f}, dalpha_dt={cart.dalpha_dt:.2f}")
             #5 дискретизированное действие
             draw_text(screen, 5, 85, f"action*={action}")
             #6 сиюминутное подкрепление
@@ -256,11 +251,11 @@ if __name__ == "__main__":
             #7 число записей в исторической таблице
             draw_text(screen, 5, 125, f"num_records={len(history.records)}")
             #8 обобщенное состояние, составленное из координаты тележки x и угла балки alpha
-            draw_text(screen, 5, 145, f"state (x, x',a, a') = {state:<04}")
+            draw_text(screen, 5, 145, f"state = (x, x', a, a') = {state:<04}")
             #9 оценка достоверности для выполняемого вручную или автоматически действия
             draw_text(screen, 5, 165, f"estQ={estimated_q:.2f}")
             #10 информация об оценке
-            draw_text(screen, 5, 185, f"Q info = {info}")
+            draw_text(screen, 5, 185, f"Q info = {info if info else 'None'}")
             #11 информация о режиме работы
             draw_text(screen, 5, 205, f"mode = {mode}")
 
@@ -270,7 +265,6 @@ if __name__ == "__main__":
             draw_plot(screen, qq, 0, 3, 600-SURFACE_Y, (0,0,255))
             draw_plot(screen, rr, 0, 3, 600-SURFACE_Y, (200,180,0))
             pygame.display.flip()
-
 
         timer.tick(fps)
 
