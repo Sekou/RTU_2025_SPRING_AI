@@ -76,7 +76,7 @@ class QTable:
     def createPolicy(self, history, statesVariants, actionsVariants):
         for sv in statesVariants:
             for av in actionsVariants:
-                q=history.calcQ(sv, av)
+                q= history.calc_q(sv, av)
                 self.policy[f"{sv}+{av}"]=q
 
     def query(self, s):

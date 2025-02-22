@@ -160,7 +160,7 @@ class Robot:
         return da
 
 def sim(robot, lm, dt):
-    robot.sim(dt)
+    robot.simulate(dt)
     d = robot.measure_dist(lm)
     a = robot.measure_ang(lm)
 
