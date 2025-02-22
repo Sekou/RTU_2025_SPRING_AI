@@ -1,15 +1,11 @@
+import sys, pygame, math, numpy as np
 
-import sys, pygame
-import numpy as np
-import math
-
-import pygame.draw
+sz = (800, 600)
 
 pygame.font.init()
 def drawText(screen, s, x, y, sz=20, color=(0,0,0)): #отрисовка текста
     font = pygame.font.SysFont('Comic Sans MS', sz)
-    surf=font.render(s, True, (0,0,0))
-    screen.blit(surf, (x,y))
+    screen.blit(font.render(s, True, (0,0,0)), (x,y))
 
 def rot(v, ang): #поворот вектора на угол
     s, c = math.sin(ang), math.cos(ang)
@@ -26,18 +22,6 @@ def rotArr(vv, ang): # функция для поворота массива н�
 def dist(p1, p2): #расстояние между точками
     return np.linalg.norm(np.subtract(p1, p2))
 
-def drawRotRect(screen, color, pc, w, h, ang): #точка центра, ширина высота прямоуг и угол поворота прямогуольника
-    pts = [
-        [- w/2, - h/2],
-        [+ w/2, - h/2],
-        [+ w/2, + h/2],
-        [- w/2, + h/2],
-    ]
-    pts = rotArr(pts, ang)
-    pts = np.add(pts, pc)
-    pygame.draw.polygon(screen, color, pts, 2)
-
-sz = (800, 600)
 
 class Tree:
     def __init__(self, x, y):
@@ -159,12 +143,7 @@ class Robot:
         self.last_measurm_a = da
         return da
 
-def sim(robot, lm, dt):
-    robot.simulate(dt)
-    d = robot.measure_dist(lm)
-    a = robot.measure_ang(lm)
-
-def main():
+if __name__=="__main__":
     screen = pygame.display.set_mode(sz)
     timer = pygame.time.Clock()
     fps = 20
@@ -172,8 +151,7 @@ def main():
 
     robot = Robot(200, 200)
     lm = Landmark(500, 300)
-    sim(robot, lm, dt)
-    pf = ParticleFilter(*robot.get_expected_lm_pos())
+    pf = None
 
     robot.observerd_lm=lm
     tree=Tree(500, 300)
@@ -195,26 +173,23 @@ def main():
                 if ev.key == pygame.K_2:
                     pf.repopulate()
 
-        sim(robot, lm, dt)
-        pf.estimate(robot.get_pos(), robot.a, lm.get_pos(), robot.measure_dist(lm), robot.measure_ang(lm))
+        robot.sim(dt)
+        d = robot.measure_dist(lm)
+        a = robot.measure_ang(lm)
 
+        if not pf:
+            pf = ParticleFilter(*robot.get_expected_lm_pos())
+        pf.estimate(robot.get_pos(), robot.a, lm.get_pos(), robot.measure_dist(lm), robot.measure_ang(lm))
         pf.repopulate()
 
         res=pf.getResult()
 
         screen.fill((255, 255, 255))
-        robot.draw(screen)
-        lm.draw(screen)
-        pf.draw(screen)
-
+        for o in [robot, tree, lm, pf]:
+            o.draw(screen)
         pygame.draw.circle(screen, (255, 0, 0), res, 3, 3)
-
-        tree.draw(screen)
-        drawText(screen, f"Test = {1}", 5, 5)
 
         pygame.display.flip()
         timer.tick(fps)
-
-main()
 
 #template file by S. Diane, RTU MIREA, 2024
