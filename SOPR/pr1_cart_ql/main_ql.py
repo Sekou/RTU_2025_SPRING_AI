@@ -7,7 +7,6 @@ SURFACE_Y= WIN_SIZE[1] * 2 / 3
 MAX_ANG = 1 #предельный угол отклонения маятника
 DISCOUNT = 0.99 #коэффициент дисконтирования
 HORIZON = 125 #горизонт учета награды
-# HORIZON = 25
 
 pygame.font.init()
 def draw_text(screen, x, y, text, sz=25): #отрисовка текста
@@ -54,16 +53,6 @@ class Cart:
         self.dalpha_dt+=self.dalpha_d2t * dt
         self.alpha += self.dalpha_dt * dt
         self.alpha = min(MAX_ANG, max(-MAX_ANG, self.alpha))
-    def control_expert(self):
-        dxCart= WIN_SIZE[0] / 2 - self.x
-        if self.alpha<-0.01:
-            self.control=1
-            if dxCart>0 and abs(self.alpha)>0.3:  self.control+= 0.1*dxCart
-        elif self.alpha>0.01:
-            self.control=-1
-            if dxCart<0 and abs(self.alpha)>0.3:  self.control+= 0.1*dxCart
-        else:
-            self.control=0
     def estimate_state_action_reward(self):
         xDiscr=discretize(self.x, [[0,350],[350,450],[450,800]], [0, 1, 2])
         vDiscr=discretize(self.v, [[-500,-10],[-10,10],[10,500]], [0, 1, 2])
@@ -81,17 +70,10 @@ class History:
         self.records.append([len(self.records), s, a, r])
     def add_empty_record(self):
         self.records.append(None)
-    def save(self, filename):
-        with open(filename, "w") as f:
-            f.write(str(self.records))
-    def read(self, filename):
-        with open(filename, "r") as f:
-            self.records=eval(f.read())
-    def clear(self):
-        self.records.clear()
     def query(self, s, a): #подвыборка записей с указанными состоянием и действием
         rr=[r for r in self.records if r and r[1]==s and r[2]==a]
         return rr
+
     def calc_q(self, s, a): #расчет интегральной оценки пары состояние-действие
         rr=self.query(s, a)
         info = f"{len(rr)} matches"
@@ -111,6 +93,14 @@ class History:
             qq.append(q/norm)
         info+=f", {breaks} breaks"
         return float(np.mean(qq)), info
+    def save(self, filename):
+        with open(filename, "w") as f:
+            f.write(str(self.records))
+    def read(self, filename):
+        with open(filename, "r") as f:
+            self.records=eval(f.read())
+    def clear(self):
+        self.records.clear()
 
 class QTable:
     def __init__(self):
@@ -164,57 +154,39 @@ if __name__ == "__main__":
             if cart.x!=last_x:
                 history.add_record(state, action, round(reward, 2))
                 last_x=cart.x
-        elif mode== "auto":# режим экспертного управления
-            cart.control_expert()
-        elif mode== "learn": # режим обучения
+        elif mode== "learn":# режим обучения
             history.add_record(state, action, round(reward, 2))
             if sel_action==None or np.random.random()<0.1:
                 sel_action=np.random.randint(3)
                 print(f"Trying: {state:<04} -> {sel_action}")
             cart.control = [-1,0,1][sel_action]
-        elif mode== "qtable": # режим обученного управления
+        elif mode== "qtable":# режим обученного управления
             sel_action= qtable.select_action(state)
             print(f"Using: {state:<04} -> {sel_action}")
             cart.control = [-1,0,1][sel_action]
 
         need_draw=True
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT: sys.exit(0)
             elif event.type == pygame.KEYDOWN:
                 manual_control={pygame.K_a: -1,pygame.K_d: 1,pygame.K_z: 0}
                 if event.key in manual_control: cart.control=manual_control[event.key]
-                elif event.key == pygame.K_m: mode= "auto" if mode == "manual" else "manual"
-                elif event.key == pygame.K_1: #тест запроса к исторической таблице по паре состояние-действие
-                    historySubset=history.query(11, 2)
-                    print(historySubset)
-                elif event.key == pygame.K_2: #тест расчета интегральной оценки эффективности пары состояние-действие
-                    Q, _ = history.calc_q(11, 2)
-                    print(Q)
                 elif event.key == pygame.K_3: #расчет оценок по всем комбинациям состояние-действие
                     s0 = set((0, 1, 2))
                     s1 = product(s0, repeat=4)
                     state_variants=[np.dot(v, [1000,100,10,1]) for v in s1]
                     qtable.create_policy(history, state_variants, [0, 1, 2])
                     print(qtable.policy)
-                elif event.key == pygame.K_4: #подвыборка действий, доступных для указанного состояния
-                    actionsSubset=qtable.query(state)
-                    print(actionsSubset)
                 elif event.key == pygame.K_5: mode= "learn" #переключение в режим автоматического Q-обучения
                 elif event.key == pygame.K_6: mode= "qtable" #переключение в режим автоматического движения по выученной таблице оценок
                 elif event.key == pygame.K_r: #сбрасываем робота в удобное положение по центру экрана
                     reset()
                     history.add_empty_record()
                     need_draw=False
-                elif event.key == pygame.K_i: #вывод информации
-                   print("Кнопка 5 - авто-обучение тележки (накопление исторических записей)")
-                   print("Кнопка 3 - расчет таблицы политики Q(s, a)")
-                   print("Кнопка 6 - режим движения по таблице-политики")
                 elif event.key == pygame.K_s: history.save("history.txt") #сохранение истории движений робота в файл
                 elif event.key == pygame.K_l: history.read("history.txt") #загрузка истории движений робота из файла
                 elif event.key == pygame.K_j: history.read("history5000.txt") #загрузка истории движений робота из файла
                 elif event.key == pygame.K_c: history.clear() #очистка истории
-
 
         cart.simulate(dt)
 
@@ -262,23 +234,5 @@ if __name__ == "__main__":
             pygame.display.flip()
 
         timer.tick(fps)
-
-        # k = abs(self.alpha)
-        # if self.alpha < -0.01:
-        #     self.control = 100 + 0.1 * dxCart * k
-        # elif self.alpha > 0.01:
-        #     self.control = -100 + 0.1 * dxCart * k
-
-#fix reward //account for alpha and x //dalpha_dt   !!!!!!!!
-#fix horizon
-#increase samples count in history
-#+ filter samples count in history
-#+ a = v? - better a=control   !!!!!!
-#+ skip resets for calc Q
-#+ random resets positions for variations in learning   !!!!!
-#+ normailze Q
-#+ не добавлять лишние записи при остановках   !!!!!!!!!!
-#скважность расчета, оценка полезности записей,
-# добавление только полезных (когда мало воспоминаний) или удаление лишних
 
 
