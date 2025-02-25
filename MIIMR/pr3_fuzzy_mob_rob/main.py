@@ -3,6 +3,8 @@ import sys, pygame
 import numpy as np
 import math
 
+from fuz import FuzzyVar
+
 pygame.font.init()
 font = pygame.font.SysFont('Comic Sans MS', 20)
 
@@ -106,6 +108,32 @@ class Robot:
         if self.steer < -maxSteer: self.steer = -maxSteer
         self.speed = 50
 
+    def gotoFuzzy(self, pos, dt):
+        v = np.subtract(pos, self.getPos())
+
+        d=np.linalg.norm(v)
+
+        #TODO: вынести в переменные класса
+        #TODO: добавить переменную угла
+        fvInp = FuzzyVar(0, 100)
+        fvInp.addTerm("DSmall", 0, 100)
+        fvInp.addTerm("DMid", 250, 500)
+        fvInp.addTerm("DBig", 500, 500)
+        fvOut = FuzzyVar(0, 80)
+        fvOut.addTerm("VSmall", 0, 30)
+        fvOut.addTerm("VMid", 40, 30)
+        fvOut.addTerm("VBig", 80, 30)
+        rules = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
+
+        self.speed=fvInp.defuzzMamdani(d, rules, fvOut)
+
+        aGoal = math.atan2(v[1], v[0])
+        da = limAng(aGoal - self.alpha)
+        self.steer += 0.5 * da * dt
+        maxSteer = 1
+        if self.steer > maxSteer: self.steer = maxSteer
+        if self.steer < -maxSteer: self.steer = -maxSteer
+
 
 def main():
     screen = pygame.display.set_mode(sz)
@@ -124,7 +152,8 @@ def main():
         dt = 1 / fps
         screen.fill((255, 255, 255))
 
-        robot.goto(goal, dt)
+        # robot.goto(goal, dt)
+        robot.gotoFuzzy(goal, dt)
 
         robot.sim(dt)
 
