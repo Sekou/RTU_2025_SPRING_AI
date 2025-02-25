@@ -58,7 +58,7 @@ class Robot:
         self.speed = 0
         self.steer = 0
         self.ksteer = 0
-        self.fuzzy, self.fvInp, self.fvOut, self.rules, self.fvInp2, self.fvOut2, self.rules2=[None]*7
+        self.fuzzy, self.fvInp, self.fvOut, self.allRules, self.fvInp2, self.fvOut2=[None]*6
         self.traj = []  # точки траектории
 
     def getPos(self):
@@ -123,7 +123,6 @@ class Robot:
             self.fvOut.addTerm("VSmall", 0, 30)
             self.fvOut.addTerm("VMid", 40, 30)
             self.fvOut.addTerm("VBig", 80, 30)
-            self.rules = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
             #угол на цель
             self.fvInp2 = FuzzyVar(0, 100)
             self.fvInp2.addTerm("ASmall", 0, 100)
@@ -133,7 +132,11 @@ class Robot:
             self.fvOut2.addTerm("KSmall", 0.1, 1.5)
             self.fvOut2.addTerm("KMid", 1, 1.5)
             self.fvOut2.addTerm("KBig", 3, 1.5)
-            self.rules2 = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
+
+            self.allRules = [[[0, 0],[0, 0]], [[1, 1],[1, 1]], [[2, 2], [2, 2]]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
+
+            self.rules =  [r[0] for r in self.allRules]
+            self.rules2 =  [r[1] for r in self.allRules]
 
         self.fuzzy=True
 
