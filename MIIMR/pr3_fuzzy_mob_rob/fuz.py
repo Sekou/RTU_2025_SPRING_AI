@@ -50,7 +50,8 @@ class FuzzyVar:
         terms2 = [fvOut.terms[rules[i][1]] for i in range(len(rules))]
         # дефаззификация выходного нечеткого множества
         J, M = 0, 0
-        for x_ in np.arange(fvOut.xmin, fvOut.xmax, 1):
+        step=(fvOut.xmax - fvOut.xmin)/split
+        for x_ in np.arange(fvOut.xmin, fvOut.xmax, step):
             v = max([min(a, t.calc(x_)) for a, t in zip(aa, terms2)])
             J += v * x_
             M += v

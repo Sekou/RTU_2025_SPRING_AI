@@ -57,6 +57,8 @@ class Robot:
         self.W = 40
         self.speed = 0
         self.steer = 0
+        self.ksteer = 0
+        self.fuzzy, self.fvInp, self.fvOut, self.rules, self.fvInp2, self.fvOut2, self.rules2=[None]*7
         self.traj = []  # точки траектории
 
     def getPos(self):
@@ -111,25 +113,38 @@ class Robot:
     def gotoFuzzy(self, pos, dt):
         v = np.subtract(pos, self.getPos())
 
+        if not self.fuzzy:
+            #расстояние
+            self.fvInp = FuzzyVar(0, 100)
+            self.fvInp.addTerm("DSmall", 0, 100)
+            self.fvInp.addTerm("DMid", 250, 500)
+            self.fvInp.addTerm("DBig", 500, 500)
+            self.fvOut = FuzzyVar(0, 80)
+            self.fvOut.addTerm("VSmall", 0, 30)
+            self.fvOut.addTerm("VMid", 40, 30)
+            self.fvOut.addTerm("VBig", 80, 30)
+            self.rules = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
+            #угол на цель
+            self.fvInp2 = FuzzyVar(0, 100)
+            self.fvInp2.addTerm("ASmall", 0, 100)
+            self.fvInp2.addTerm("AMid", 250, 500)
+            self.fvInp2.addTerm("ABig", 500, 500)
+            self.fvOut2 = FuzzyVar(0, 3)
+            self.fvOut2.addTerm("KSmall", 0.1, 1.5)
+            self.fvOut2.addTerm("KMid", 1, 1.5)
+            self.fvOut2.addTerm("KBig", 3, 1.5)
+            self.rules2 = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
+
+        self.fuzzy=True
+
         d=np.linalg.norm(v)
-
-        #TODO: вынести в переменные класса
-        #TODO: добавить переменную угла
-        fvInp = FuzzyVar(0, 100)
-        fvInp.addTerm("DSmall", 0, 100)
-        fvInp.addTerm("DMid", 250, 500)
-        fvInp.addTerm("DBig", 500, 500)
-        fvOut = FuzzyVar(0, 80)
-        fvOut.addTerm("VSmall", 0, 30)
-        fvOut.addTerm("VMid", 40, 30)
-        fvOut.addTerm("VBig", 80, 30)
-        rules = [[0, 0], [1, 1], [2, 2]]  # при наблюдении нечеткого значения i выдать нечеткое значение j
-
-        self.speed=fvInp.defuzzMamdani(d, rules, fvOut)
+        self.speed=self.fvInp.defuzzMamdani(d, self.rules, self.fvOut)
 
         aGoal = math.atan2(v[1], v[0])
         da = limAng(aGoal - self.alpha)
-        self.steer += 0.5 * da * dt
+        self.ksteer=self.fvInp2.defuzzMamdani(abs(da), self.rules2, self.fvOut2)
+
+        self.steer += self.ksteer * da * dt
         maxSteer = 1
         if self.steer > maxSteer: self.steer = maxSteer
         if self.steer < -maxSteer: self.steer = -maxSteer
@@ -161,7 +176,9 @@ def main():
 
         pygame.draw.circle(screen, (255, 0, 0), goal, 5, 2)
 
-        drawText(screen, f"Time = {time:.3f}", 5, 5)
+        if robot.fuzzy:
+            drawText(screen, f"speed = {robot.speed:.3f}", 5, 5)
+            drawText(screen, f"ksteer = {robot.ksteer:.3f}", 5, 25)
 
         pygame.display.flip()
         timer.tick(fps)
