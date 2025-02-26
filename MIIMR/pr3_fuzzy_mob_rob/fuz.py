@@ -1,3 +1,5 @@
+#S. Diane, 2024 - 2025, fuzzy logic example
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -82,5 +84,3 @@ if __name__ == "__main__":
     yy = [fvInp.defuzzMamdani(x, rules, fvOut) for x in xx]
     plt.plot(xx, yy)
     plt.show()
-
-#S. Diane, 2025
