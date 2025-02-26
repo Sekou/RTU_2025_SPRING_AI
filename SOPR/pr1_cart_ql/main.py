@@ -50,7 +50,8 @@ class Cart:
         self.a=90*self.control
         self.v+=self.a * dt
         self.x += self.v * dt
-        self.dalpha_d2t=0.9*self.alpha + 0.01*self.a
+        self.dalpha_d2t=0.9*math.sin(self.alpha) + 0.01*self.a*math.cos(self.alpha)
+        # self.dalpha_d2t=0.9*self.alpha + 0.01*self.a
         self.dalpha_dt+=self.dalpha_d2t * dt
         self.alpha += self.dalpha_dt * dt
         self.alpha = min(MAX_ANG, max(-MAX_ANG, self.alpha))
@@ -247,7 +248,7 @@ if __name__ == "__main__":
             draw_text(screen, 5, 125, f"num_records={len(history.records)}")
             #8 обобщенное состояние, составленное из координаты тележки x и угла балки alpha
             draw_text(screen, 5, 145, f"state = (x, x', a, a') = {state:<04}")
-            #9 оценка достоверности для выполняемого вручную или автоматически действия
+            #9 оценка целесообразности для выполняемого вручную или автоматически действия
             draw_text(screen, 5, 165, f"estQ={estimated_q:.2f}")
             #10 информация об оценке
             draw_text(screen, 5, 185, f"Q info = {info if info else 'None'}")
