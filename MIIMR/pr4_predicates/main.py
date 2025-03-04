@@ -7,6 +7,7 @@ import math
 
 import random
 
+from fontTools.ttLib.scaleUpem import visit
 from soupsieve import select
 
 pygame.font.init()
@@ -55,23 +56,58 @@ class Obj:
         draw_text(screen, f"{self.id}", self.x-4, self.y-4, 25)
 
 class Event: # событие = передикат = действие
-    def __init__(self, i_swap, all_objects):
+    def __init__(self, parent, i_swap, all_objects, depth=0):
+        self.depth=depth #глубина узла
         self.i_swap=i_swap #индекс перестановки
-        self.objects=all_objects #массив переставленных объектов
-        swap(i_swap, self.objects)
+        self.objects=[*all_objects] #массив переставленных объектов
+        if i_swap>=0:
+            swap(i_swap, self.objects)
+        self.parent=parent #родительский узел
         self.next_events=[] #варианты дальнейших перестановок
-    def generate_next_events(self, all_objects, remaining_objects):
+
+    def generate_next_events(self, all_objects, remaining_objects, max_depth=6):
+        if self.depth>=max_depth: return
         for i, o in enumerate(all_objects):
-            remaining_objects=[o2 for o2 in remaining_objects if o2!=o]
-            if remaining_objects:#рекурсивная генерация дальнейших событий
-                ev=Event(i, all_objects) #новое событие по сортировке объектов
-                ev.generate_next_events(all_objects, remaining_objects)
+            # if o not in remaining_objects: continue #допущение: нельзя переставлять объект дважды
+            # remaining_objects2=[o2 for o2 in remaining_objects if o2!=o]
+            remaining_objects2=remaining_objects
+            if remaining_objects2:#рекурсивная генерация дальнейших событий
+                ev=Event(self, i, all_objects, self.depth+1) #новое событие по сортировке объектов
+                ev.generate_next_events(all_objects, remaining_objects2)
                 self.next_events.append(ev)
+    def to_string(self):
+        return "; ".join(str(o.id) for o in self.objects)
+    def to_string_full(self):
+        pad="".join(["\t"]*self.depth)
+        s=pad+self.to_string()+"\n"
+        for e in self.next_events:
+            s+=pad+e.to_string_full()
+        return s
+    def get_path(self):
+        n=self
+        res=[]
+        while n.parent:
+            res.append(n)
+            n=n.parent
+        return res
 
 class Graph:
     def __init__(self, objects):
-        self.root_event=Event(-1, objects) #корневое событие по сортировке объектов
+        self.root_event=Event(None, -1, objects) #корневое событие по сортировке объектов
         self.root_event.generate_next_events(objects, objects)
+    def to_string(self):
+        return  self.root_event.to_string_full()
+    def find_plan(self, desired_result): # например, desired_result = "0; 2; 1; 3; 4; 5"
+        result=None
+        min_depth=math.inf
+        #требуется реализовать обход графа в ширину
+        current_nodes=[self.root_event]
+        for n in current_nodes:
+            if n.to_string()==desired_result: #предикат узла равен результату
+                return n.get_path()
+            else:
+                current_nodes.extend(n.next_events)
+        return None
 
 sz = (800, 600)
 
@@ -114,7 +150,18 @@ def main():
                     index=(index+1)%len(objs)
                     objs[index].selected=True
                     objs[(index+1)%len(objs)].selected=True
-
+                if ev.key == pygame.K_p:
+                    s=graph.to_string()
+                    # print(s)
+                    with open("graph.txt", "w") as f:
+                        f.write(s)
+                if ev.key == pygame.K_f:
+                    # path=graph.find_plan("4; 5; 3; 1; 2; 0")
+                    #path=graph.find_plan("5; 1; 2; 3; 4; 0")
+                    path=graph.find_plan("0; 2; 1; 3; 4; 5")
+                    for n in path:
+                        print(n.i_swap)
+                        print(n.to_string())
 
         dt=1/fps
 
