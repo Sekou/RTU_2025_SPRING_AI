@@ -1,12 +1,9 @@
 
 import sys, pygame
 from random import random
-
 import numpy as np
 import math
-
 import random
-
 from fontTools.ttLib.scaleUpem import visit
 from soupsieve import select
 
@@ -59,22 +56,28 @@ class Event: # событие = передикат = действие
     def __init__(self, parent, i_swap, all_objects, depth=0):
         self.depth=depth #глубина узла
         self.i_swap=i_swap #индекс перестановки
-        self.objects=[*all_objects] #массив переставленных объектов
-        if i_swap>=0:
-            swap(i_swap, self.objects)
+        # массив переставленных объектов
+        self.objects=copy(all_objects, 0) #! FIXED ERROR [*all_objects] -> copy(all_objects)
+        if i_swap>=0: swap(i_swap, self.objects)
         self.parent=parent #родительский узел
         self.next_events=[] #варианты дальнейших перестановок
-
-    def generate_next_events(self, all_objects, remaining_objects, max_depth=6):
+    def check_new_event(self, event):
+        p=self
+        while p:
+            if p.to_string() == event.to_string():
+                return False
+            p=p.parent
+        return True
+    def generate_next_events(self, all_objects, max_depth=6):
         if self.depth>=max_depth: return
         for i, o in enumerate(all_objects):
-            # if o not in remaining_objects: continue #допущение: нельзя переставлять объект дважды
-            # remaining_objects2=[o2 for o2 in remaining_objects if o2!=o]
-            remaining_objects2=remaining_objects
-            if remaining_objects2:#рекурсивная генерация дальнейших событий
-                ev=Event(self, i, all_objects, self.depth+1) #новое событие по сортировке объектов
-                ev.generate_next_events(all_objects, remaining_objects2)
+            #рекурсивная генерация дальнейших событий
+            ev=Event(self, i, all_objects, self.depth+1) #новое событие по сортировке объектов
+            if self.check_new_event(ev):
                 self.next_events.append(ev)
+                ev.generate_next_events(ev.objects)
+                # ! FIXED ERROR all_objects -> self.objects
+                # ! FIXED ERROR self.objects -> ev.objects
     def to_string(self):
         return "; ".join(str(o.id) for o in self.objects)
     def to_string_full(self):
@@ -94,27 +97,29 @@ class Event: # событие = передикат = действие
 class Graph:
     def __init__(self, objects):
         self.root_event=Event(None, -1, objects) #корневое событие по сортировке объектов
-        self.root_event.generate_next_events(objects, objects)
+        self.root_event.generate_next_events(objects)
     def to_string(self):
         return  self.root_event.to_string_full()
     def find_plan(self, desired_result): # например, desired_result = "0; 2; 1; 3; 4; 5"
         result=None
         min_depth=math.inf
-        #требуется реализовать обход графа в ширину
+        #обход графа в ширину
         current_nodes=[self.root_event]
         for n in current_nodes:
             if n.to_string()==desired_result: #предикат узла равен результату
-                return n.get_path()
+                return reversed(n.get_path()) #FIXED: reversed()
             else:
                 current_nodes.extend(n.next_events)
         return None
 
 sz = (800, 600)
 
+def copy(objects, dy=0): #NEW
+    return [Obj(o.id, o.x, o.y + dy, o.sz) for o in objects]
 def swap(index, objects):
     i=(index+1)%len(objects)
-    objects[i-1], objects[i] = objects[i], objects[i-1]
     objects[i-1].x, objects[i].x = objects[i].x, objects[i-1].x
+    objects[i-1], objects[i] = objects[i], objects[i-1]
 
 #TODO: проверить на какой глубине отсекать дерево событий + достаточно ли 5 уровней
 
@@ -131,7 +136,7 @@ def main():
     for i in range(6):
         objs.append( Obj(i, 200+35*i, 200, 30) )
 
-    objs2=[Obj(o.id, o.x, o.y + 50, o.sz) for o in objs]
+    objs2=copy(objs, 50)
     random.shuffle(objs2)
 
     graph = Graph(objs)
@@ -158,7 +163,7 @@ def main():
                 if ev.key == pygame.K_f:
                     # path=graph.find_plan("4; 5; 3; 1; 2; 0")
                     #path=graph.find_plan("5; 1; 2; 3; 4; 0")
-                    path=graph.find_plan("0; 2; 1; 3; 4; 5")
+                    path=graph.find_plan("0; 2; 1; 3; 5; 4")
                     for n in path:
                         print(n.i_swap)
                         print(n.to_string())
