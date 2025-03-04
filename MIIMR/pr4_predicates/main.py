@@ -7,6 +7,9 @@ import random
 from fontTools.ttLib.scaleUpem import visit
 from soupsieve import select
 
+NUM_TASKS=6
+MAX_DEPTH=5
+
 pygame.font.init()
 def draw_text(screen, s, x, y, sz=20, color=(0,0,0)): #отрисовка текста
     font = pygame.font.SysFont('Comic Sans MS', sz)
@@ -57,7 +60,7 @@ class Event: # событие = передикат = действие
         self.depth=depth #глубина узла
         self.i_swap=i_swap #индекс перестановки
         # массив переставленных объектов
-        self.objects=copy(all_objects, 0) #! FIXED ERROR [*all_objects] -> copy(all_objects)
+        self.objects=copy(all_objects, 0, 0) #! FIXED ERROR [*all_objects] -> copy(all_objects)
         if i_swap>=0: swap(i_swap, self.objects)
         self.parent=parent #родительский узел
         self.next_events=[] #варианты дальнейших перестановок
@@ -68,8 +71,8 @@ class Event: # событие = передикат = действие
                 return False
             p=p.parent
         return True
-    def generate_next_events(self, all_objects, max_depth=6):
-        if self.depth>=max_depth: return
+    def generate_next_events(self, all_objects):
+        if self.depth>=MAX_DEPTH: return
         for i, o in enumerate(all_objects):
             #рекурсивная генерация дальнейших событий
             ev=Event(self, i, all_objects, self.depth+1) #новое событие по сортировке объектов
@@ -95,7 +98,8 @@ class Event: # событие = передикат = действие
         return res
 
 class Graph:
-    def __init__(self, objects):
+    def __init__(self, objects, max_depth=8):
+        self.max_depth=max_depth
         self.root_event=Event(None, -1, objects) #корневое событие по сортировке объектов
         self.root_event.generate_next_events(objects)
     def to_string(self):
@@ -114,35 +118,58 @@ class Graph:
 
 sz = (800, 600)
 
-def copy(objects, dy=0): #NEW
-    return [Obj(o.id, o.x, o.y + dy, o.sz) for o in objects]
+def copy(objects, dx=0, dy=0): #NEW
+    return [Obj(o.id, o.x + dx, o.y + dy, o.sz) for o in objects]
 def swap(index, objects):
     i=(index+1)%len(objects)
     objects[i-1].x, objects[i].x = objects[i].x, objects[i-1].x
     objects[i-1], objects[i] = objects[i], objects[i-1]
 
+
+def find_task(task, graph):
+    path = graph.find_plan(task)
+    steps = []
+    if not path:
+        print("Path not found")
+    else:
+        for i, n in enumerate(path):
+            print(n.i_swap)
+            print(n.to_string())
+            steps.append(copy(n.objects, 10 * (i + 1.5), 35 * (i + 1.5)))
+    return steps
+
 #TODO: проверить на какой глубине отсекать дерево событий + достаточно ли 5 уровней
 
 def main():
-    random.seed(0)
+    # random.seed(0)
     screen = pygame.display.set_mode(sz)
     timer = pygame.time.Clock()
     fps = 20
     index = 0 #индекс объекта
 
     # obj=Obj(0, 200, 200, 30)
-    objs=[]
+    objs, objs2=[], []
 
-    for i in range(6):
-        objs.append( Obj(i, 200+35*i, 200, 30) )
+    for i in range(NUM_TASKS):
+        objs.append( Obj(i, 200+35*i, 100, 30) )
 
-    objs2=copy(objs, 50)
-    random.shuffle(objs2)
+    graph = Graph(objs, 5)
+    with open("graph.txt", "w") as f:
+        f.write(graph.to_string())
 
-    graph = Graph(objs)
+    steps=[]
 
-    for o1,o2 in zip(objs, objs2):
-        o2.x = o1.x
+    def change_task(objs):
+        objs2=copy(objs, 0, 400)
+        random.shuffle(objs2)
+        for (o1,o2) in zip(objs, objs2): o2.x=o1.x
+        return objs2
+    def reselect():
+        for o in objs: o.selected = False
+        objs[index].selected = True
+        objs[(index + 1) % len(objs)].selected = True
+
+    objs2 = change_task(objs)
 
     while True:
         for ev in pygame.event.get():
@@ -150,23 +177,20 @@ def main():
                 sys.exit(0)
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_i:
-                    swap(index, objs)
-                    for o in objs: o.selected=False
+                    index=(index-1)%len(objs)
+                    reselect()
+                if ev.key == pygame.K_o:
                     index=(index+1)%len(objs)
-                    objs[index].selected=True
-                    objs[(index+1)%len(objs)].selected=True
-                if ev.key == pygame.K_p:
-                    s=graph.to_string()
-                    # print(s)
-                    with open("graph.txt", "w") as f:
-                        f.write(s)
+                    reselect()
+                if ev.key == pygame.K_u:
+                    swap(index, objs)
+                if ev.key == pygame.K_t:
+                    objs2 = change_task(objs)
+                    task="; ".join([str(o.id) for o in objs2])
+                    steps=find_task(task, graph)
                 if ev.key == pygame.K_f:
-                    # path=graph.find_plan("4; 5; 3; 1; 2; 0")
-                    #path=graph.find_plan("5; 1; 2; 3; 4; 0")
-                    path=graph.find_plan("0; 2; 1; 3; 5; 4")
-                    for n in path:
-                        print(n.i_swap)
-                        print(n.to_string())
+                    task="; ".join([str(o.id) for o in objs2])
+                    steps=find_task(task, graph)
 
         dt=1/fps
 
@@ -177,11 +201,21 @@ def main():
         for obj in objs2:
             obj.draw(screen)
 
+        for s in steps:
+            for o in s:
+                o.draw(screen)
+
         draw_text(screen, f"Index = {index}", 5, 5)
+
+        draw_text(screen, "Вход", 300, 50, 45)
+        draw_text(screen, "Шаги", 500, 200, 45)
+        draw_text(screen, "Цель", 300, 450, 45)
 
         pygame.display.flip()
         timer.tick(fps)
 
 main()
+
+#Контрольный вопрос: почему не всегда находится план действий?
 
 #template file by S. Diane, RTU MIREA, 2024
