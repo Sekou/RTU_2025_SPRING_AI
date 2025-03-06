@@ -10,7 +10,7 @@ sim = client.getObject('sim')
 defaultIdleFps = sim.getInt32Param(sim.intparam_idle_fps)
 sim.setInt32Param(sim.intparam_idle_fps, 0) #set max loop rate
 
-#Prepare; initial; values and retrieve handles:
+#Prepare initial values and retrieve handles:
 wheelJoints = [-1, -1, -1, -1] #front left, rear left, rear right, front right
 wheelJoints[0] = sim.getObject('./youBot/rollingJoint_fl')
 wheelJoints[1] = sim.getObject('./youBot/rollingJoint_rl')

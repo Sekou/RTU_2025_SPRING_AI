@@ -24,7 +24,6 @@ v0 = 2
 
 # Run a simulation in asynchronous mode:
 client.setStepping(False)
-sim.startSimulation()
 while (t := sim.getSimulationTime()) < TIME:
     print(f'Simulation time: {t:.2f}')
 
@@ -49,7 +48,5 @@ while (t := sim.getSimulationTime()) < TIME:
 while sim.getSimulationState() != sim.simulation_stopped:
     time.sleep(0.1)
 
-#stop
-sim.stopSimulation()
 print('Program ended')
 
