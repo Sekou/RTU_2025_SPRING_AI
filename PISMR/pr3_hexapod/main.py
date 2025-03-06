@@ -67,3 +67,73 @@ while (t := sim.getSimulationTime()) < TIME:
     client.step()  # triggers next simulation step
 
 print('Program ended')
+
+#
+# moveBody=function(index)
+#     local p={initialP[1],initialP[2],initialP[3]}
+#     local o={initialO[1],initialO[2],initialO[3]}
+#     moveToPose(legBase,antBase,p,o,vel,accel)
+#     if (index==0) then
+#         -- up/down
+#         p[3]=p[3]-0.03*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel*2,accel)
+#         p[3]=p[3]+0.03*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel*2,accel)
+#     end
+#     if (index==1) then
+#         -- 4x twisting
+#         o[1]=o[1]+5*math.pi/180
+#         o[2]=o[2]-05*math.pi/180
+#         o[3]=o[3]-15*math.pi/180
+#         p[1]=p[1]-0.03*sizeFactor
+#         p[2]=p[2]+0.015*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[1]=o[1]-10*math.pi/180
+#         o[3]=o[3]+30*math.pi/180
+#         p[2]=p[2]-0.04*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[1]=o[1]+10*math.pi/180
+#         o[2]=o[2]+10*math.pi/180
+#         p[2]=p[2]+0.03*sizeFactor
+#         p[1]=p[1]+0.06*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[1]=o[1]-10*math.pi/180
+#         o[3]=o[3]-30*math.pi/180
+#         p[2]=p[2]-0.03*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#     end
+#     if (index==2) then
+#         -- rolling
+#         p[3]=p[3]-0.0*sizeFactor
+#         o[1]=o[1]+17*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[1]=o[1]-34*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[1]=o[1]+17*math.pi/180
+#         p[3]=p[3]+0.0*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#     end
+#     if (index==3) then
+#         -- pitching
+#         p[3]=p[3]-0.0*sizeFactor
+#         o[2]=o[2]+15*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[2]=o[2]-30*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[2]=o[2]+15*math.pi/180
+#         p[3]=p[3]+0.0*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#     end
+#     if (index==4) then
+#         -- yawing
+#         p[3]=p[3]+0.0*sizeFactor
+#         o[3]=o[3]+30*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[3]=o[3]-60*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         o[3]=o[3]+30*math.pi/180
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#         p[3]=p[3]-0.0*sizeFactor
+#         moveToPose(legBase,antBase,p,o,vel,accel)
+#     end
+# end
