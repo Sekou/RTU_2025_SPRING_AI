@@ -68,7 +68,6 @@ while (t := sim.getSimulationTime()) < TIME:
 
 print('Program ended')
 
-#
 # moveBody=function(index)
 #     local p={initialP[1],initialP[2],initialP[3]}
 #     local o={initialO[1],initialO[2],initialO[3]}
