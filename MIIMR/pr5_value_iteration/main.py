@@ -45,17 +45,24 @@ def place_rewards(grid):
         else: c.reward, c.value= 0, 0
 
 def value_iteration(grid):
-    gamma=0.3
+    gamma=0.1
     nx, ny = grid.nx, grid.ny
     for i in range(0, ny):
         for j in range(0, nx):
             c=grid.get_cell(j, i)
             cc=list(grid.get_cell_neighbours(j, i))
-            p_cell = 1/(1+len(cc)) #вероятность перехода в клетку
-            c.value=p_cell*c.reward
-            for c_ in cc:
+            i_best=np.argmax([c_.value for c_ in cc])
+            c_best=cc[i_best]
+            if c.reward==0:
+                c.value += gamma * (c_best.value - c.value)
+            else:
+                c.value=c.reward
+
+            # p_cell = 1 / (1 + len(cc))  # вероятность перехода в клетку
+            # c.value = p_cell * c.reward
+            # for c_ in cc:
                 # c.value+=p_cell*(c_.value*gamma+c_.reward)
-                c.value=max(c.value, c_.value*gamma+c_.reward)
+                # c.value=max(c.value, c_.value*gamma+c_.reward)
 
 
 def main():
