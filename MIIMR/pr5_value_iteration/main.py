@@ -38,7 +38,24 @@ def drawRotRect(screen, color, pc, w, h, ang): #точка центра, шир�
 
 sz = (800, 600)
 
-# def value_iteration(grid):
+def place_rewards(grid):
+    for c in grid.cells:
+        if c.text=="G": c.reward, c.value=100, 0
+        elif c.text=="O": c.reward, c.value=-100, 0
+        else: c.reward, c.value= 0, 0
+
+def value_iteration(grid):
+    gamma=0.3
+    nx, ny = grid.nx, grid.ny
+    for i in range(0, ny):
+        for j in range(0, nx):
+            c=grid.get_cell(j, i)
+            cc=list(grid.get_cell_neighbours(j, i))
+            p_cell = 1/(1+len(cc)) #вероятность перехода в клетку
+            c.value=p_cell*c.reward
+            for c_ in cc:
+                # c.value+=p_cell*(c_.value*gamma+c_.reward)
+                c.value=max(c.value, c_.value*gamma+c_.reward)
 
 
 def main():
@@ -47,20 +64,22 @@ def main():
     fps = 20
 
     grid = table2d.Table(200,200,400,300, 8, 6)
-    grid.getCell(0,0).text="R"
-    grid.getCell(2,3).text="O"
-    grid.getCell(3,3).text="O"
-    grid.getCell(4,3).text="O"
-    grid.getCell(4,2).text="O"
-    grid.getCell(7,5).text="G"
+    grid.get_cell(0, 0).text= "R"
+    grid.get_cell(2, 3).text= "O"
+    grid.get_cell(3, 3).text= "O"
+    grid.get_cell(4, 3).text= "O"
+    grid.get_cell(4, 2).text= "O"
+    grid.get_cell(7, 5).text= "G"
+
+    place_rewards(grid)
 
     while True:
         for ev in pygame.event.get():
             if ev.type==pygame.QUIT:
                 sys.exit(0)
             if ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_r:
-                    print("Hi")
+                if ev.key == pygame.K_1:
+                    value_iteration(grid)
 
         dt=1/fps
 
