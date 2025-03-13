@@ -19,6 +19,8 @@ class Table: #таблица
         self.font = pygame.font.SysFont(None, 20)
         numCells=nx*ny
         self.cells=[Cell(i) for i in range(numCells)]
+    def convert_ix_iy(self, ind):
+        return ind%self.nx, ind//self.nx
     def get_cell_neighbours(self, ix0, iy0):
         for ix in range(ix0-1, ix0+2):
             for iy in range(iy0-1, iy0+2):
@@ -38,7 +40,7 @@ class Table: #таблица
         x_ = round(self.x0 + (ix + 1) * self.width / self.nx)
         return [x, y, x_ - x, y_ - y]
     def get_cell_center(self, ix, iy): #центр ячейки
-        bb= self.get_cell_bb(ix, iy)
+        bb = self.get_cell_bb(ix, iy)
         return [bb[0]+0.5*bb[2], bb[1]+0.5*bb[3]]
     def draw_text(self, screen, txt, bb, dx, dy, color=(0,0,0)):
         img = self.font.render(txt, True, color)

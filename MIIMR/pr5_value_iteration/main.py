@@ -64,6 +64,30 @@ def value_iteration(grid):
                 # c.value+=p_cell*(c_.value*gamma+c_.reward)
                 # c.value=max(c.value, c_.value*gamma+c_.reward)
 
+def find_path(grid):
+    path=[]
+    r=[c for c in grid.cells if c.text=="R"][0]
+    i_next=r.id
+    last_val=-1
+    while True:
+        path.append(i_next)
+        ix, iy = grid.convert_ix_iy(i_next)
+        neighbours=list(grid.get_cell_neighbours(ix, iy))
+        i_local = np.argmax([n.value for n in neighbours])
+        i_next = neighbours[i_local].id
+        if neighbours[i_local].value<=last_val:
+            break
+        last_val=neighbours[i_local].value
+    return path
+
+def draw_path(screen, grid, path):
+    for i in range(1, len(path)):
+        i1, i2=path[i-1], path[i]
+        ix1, iy1=grid.convert_ix_iy(i1)
+        ix2, iy2=grid.convert_ix_iy(i2)
+        c1=grid.get_cell_center(ix1, iy1)
+        c2=grid.get_cell_center(ix2, iy2)
+        pygame.draw.line(screen, (255,0,0), c1, c2, 2)
 
 def main():
     screen = pygame.display.set_mode(sz)
@@ -80,6 +104,8 @@ def main():
 
     place_rewards(grid)
 
+    path=[]
+
     while True:
         for ev in pygame.event.get():
             if ev.type==pygame.QUIT:
@@ -87,12 +113,16 @@ def main():
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_1:
                     value_iteration(grid)
+                if ev.key == pygame.K_2:
+                    path=find_path(grid)
+                    print(path)
 
         dt=1/fps
 
         screen.fill((255, 255, 255))
 
         grid.draw(screen)
+        draw_path(screen, grid, path)
 
         drawText(screen, f"Test = {1}", 5, 5)
 
