@@ -55,18 +55,30 @@ initialP = [0, 0, 0]
 initialO = [0, 0, 0]
 initialP[2] = initialP[2] - 0.03 * sizeFactor
 
+def moveBody():
+    initialP = [0, 0, 0]
+    initialO = [0, 0, 0]
+    p = [initialP[0], initialP[1], initialP[2]]
+    o = [initialO[0], initialO[1], initialO[2]]
+    p[2]=p[2]-0.03*sizeFactor
+    moveToPose(legBase,antBase,p,o,vel*2,accel)
+    p[2]=p[2]+0.03*sizeFactor
+    moveToPose(legBase,antBase,p,o,vel*2,accel)
+
 while (t := sim.getSimulationTime()) < TIME:
     print(f'Simulation time: {t:.2f}')
-
     #движение
-    p = [initialP[0], initialP[1]+t, initialP[2]]
-    o = [initialO[0], initialO[1], initialO[2]]
-    moveToPose(legBase, antBase, p, o, vel, accel)
+    # p = [initialP[0], initialP[1]+t, initialP[2]]
+    # o = [initialO[0], initialO[1], initialO[2]]
+    # moveToPose(legBase, antBase, p, o, vel, accel)
     # moveToPose()
+    moveBody()
 
     client.step()  # triggers next simulation step
 
 print('Program ended')
+
+
 
 # moveBody=function(index)
 #     local p={initialP[1],initialP[2],initialP[3]}
