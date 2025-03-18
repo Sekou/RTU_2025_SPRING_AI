@@ -9,6 +9,18 @@ import numpy as np
 def dist(p1, p2):
     return np.linalg.norm(np.subtract(p2, p1))
 
+
+pygame.font.init()
+def drawText(screen, s, x, y, sz=30, color=(0,0,0)): #отрисовка текста
+    font = pygame.font.SysFont('Comic Sans MS', sz)
+    screen.blit(font.render(s, True, (0,0,0)), (x,y))
+
+def calc_circular_dist(alpha1, alpha2):
+    d=alpha2-alpha1
+    d2=math.pi*2+d
+    if d2>math.pi: d2-=math.pi*2
+    return d if abs(d)<abs(d2) else d2
+
 # звено манипулятора
 class Link:
     def __init__(self, L, alpha):
@@ -87,6 +99,20 @@ class RobotManipulator:
             for i in range(len(self.links)):
                 find_q(i)
 
+    def calc_Jacobi_mat(self):
+        #TODO: account for more links
+        l1, l2=self.links[0].L, self.links[1].L
+        a1, a2=self.links[0].alpha, self.links[1].alpha
+        s1,s12=math.sin(a1),math.sin(a1+a2)
+        c1,c12=math.cos(a1),math.cos(a1+a2)
+        dx_dq1=-l1*s1-l2*s12
+        dx_dq2=-l2*s12
+        dy_dq1 = l1 * c1 + l2 * c12
+        dy_dq2 = l2 * c12
+        J=[[dx_dq1, dx_dq2],[dy_dq1, dy_dq2]]
+        return J
+
+
 class TrajSegment:
     def __init__(self, p1, p2):
         self.p1, self.p2=p1, p2
@@ -97,6 +123,8 @@ class TrajSegment:
 #TODO: интерполяция координат
 #TODO: отрисовка траектории концевой точки манипулятора
 
+
+
 if __name__ == "__main__":
 
     MODE="manual"
@@ -105,7 +133,7 @@ if __name__ == "__main__":
     width = 800
     height = 600
     timer = pygame.time.Clock()
-    fps = 30
+    fps = 3
     dt = 1 / fps
     screen = pygame.display.set_mode((width, height))
     pos = (0, 0)
@@ -142,6 +170,9 @@ if __name__ == "__main__":
                 if events.key == pygame.K_c:
                     MODE = "interpolation"
                     r.traj = []
+                if events.key == pygame.K_v:
+                    MODE = "interpolation2"
+                    r.traj = []
 
         screen.fill((255, 255, 255))
         if MODE == "test motion":
@@ -149,18 +180,35 @@ if __name__ == "__main__":
             r.links[1].alpha += 0.4 * dt
             r.update_traj()
         if MODE == "interpolation":
-            for pair in zip(r.links, [qq1, qq2]):
-                l=pair[0]
-                qmax=pair[1][1]
-                delta=qmax-l.alpha
-                if abs(delta)>0.1:
-                    l.alpha-=1*dt*np.sign(delta)
+            ww=[0.1, 0.1]
+            qq = [l.alpha for l in r.links]
+            dqdq=[calc_circular_dist(qq1[i], qq2[i]) for i, l in enumerate(r.links)]
+            for i, l in enumerate(r.links):
+                dq=calc_circular_dist(qq[i], qq2[i])
+                if abs(dq)>0.05:
+                    l.alpha+=ww[i]*dt*np.sign(dqdq[i])
             r.update_traj()
-
+        if MODE == "interpolation2":
+            dpos=np.subtract(segment.p2, segment.p1)
+            if dist(r.endPos, segment.p2)>5:
+                J=r.calc_Jacobi_mat()
+                Jinv=np.linalg.inv(J)
+                dq = np.matmul(Jinv, dpos)
+                for i, l in enumerate(r.links):
+                    l.alpha+=0.1*dq[i]*dt
+            r.update_traj()
 
         r.calc()
         r.draw(screen)
         segment.draw(screen)
+
+        drawText(screen, f"q1={r.links[0].alpha:.2f}", 5, 5)
+        drawText(screen, f"q2={r.links[1].alpha:.2f}", 5, 25)
+        drawText(screen, f"x={r.endPos[0]:.2f}", 5, 45)
+        drawText(screen, f"y={r.endPos[1]:.2f}", 5, 65)
+        if qq1 and qq2:
+            drawText(screen, f"dq1={calc_circular_dist(qq1[0], qq2[0]):.2f}", 5, 85)
+            drawText(screen, f"dq2={calc_circular_dist(qq1[1], qq2[1]):.2f}", 5, 105)
 
         pygame.display.flip()
         timer.tick(fps)
