@@ -2,7 +2,6 @@ import math
 
 import numpy as np
 
-
 arr1=["g", "o", "g", "g", "o", "o", "r", "g", "r", "g"] #3 разных цвета
 arr2=["g", "g", "g", "g", "g", "g", "g", "g", "g", "g"] #1 цвет
 arr3=["g", "r", "v", "o"] #4 разных цвета
@@ -46,25 +45,40 @@ print(i, H, a1, a2)
 class Node:
     def __init__(self, parent, parent_split_ind, parent_split_H, arr):
         self.parent = parent
-        self.parent_split_H=parent_split_H
+        self.parent_split_H=parent_split_H #суммарная энтропия родителдьского разбиения
+        self.own_H=calc_entropy(arr) #собственная энтропия (по массиву arr)
         self.parent_split_ind=parent_split_ind
         self.arr=arr
         self.childs=None
+        self.level=parent.level+1 if parent else 0
+
     def split_childs(self):
         i, H, a1, a2 = split_array(self.arr)
-        self.childs=[Node(self, i, H, a1), Node(self, i, H, a1)]
-        for ch in self.childs:
-            ch.split_childs()
+        if a2:
+            self.childs=[Node(self, i, H, a1), Node(self, i, H, a2)]
+            for ch in self.childs:
+                ch.split_childs()
+    def print_struct(self):
+        indent = "".join(["-  "]*self.level)
+        print(f"{indent} ({self.level} {self.parent_split_ind} {self.own_H:.2f} {self.arr}) ")
+        if self.childs:
+            for ch in self.childs:
+                ch.print_struct()
 
+#https://habr.com/ru/articles/171759/
 class Graph:
     def __init__(self, arr):
         self.arr=arr
-        self.root_node=Node(None, -1, 0, None)
+        self.root_node=Node(None, -1, 0, arr)
 
     def split_childs(self):
         self.root_node.split_childs()
 
+    def print_struct(self):
+        print("CLASSIFICATION TREE:")
+        self.root_node.print_struct()
+
 
 tree = Graph(arr1)
 tree.split_childs()
-
+tree.print_struct()
