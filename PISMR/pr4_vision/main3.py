@@ -57,21 +57,21 @@ while (t := sim.getSimulationTime()) < 30:
     # elif(t<15): setMovement(v, 0, w)
     # elif(t<25): setMovement(v, 0, w)
     # elif(t<35): setMovement(v, 0, 0)
-    # if(t-last_t>1 and img_ind<5):
-    #Read camera
-    img, resX, resY = sim.getVisionSensorCharImage(visionSensorHandle)
-    img = np.frombuffer(img, dtype=np.uint8).reshape(resY, resX, 3)
-    img = cv2.flip(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), 0)
-    cv2.imwrite(f"{script_dir}/images/{img_ind}.jpg", img)
-    img_ind+=1
-    last_t=t
-    try:
-        x, y = find_object(img)
-        dx=x - img.shape[0]/2
-        print("dx=", dx)
-        setMovement(v, 0, dx/100)
-    except:
-        pass
+    if(t-last_t>0.5):
+        #Read camera
+        img, resX, resY = sim.getVisionSensorCharImage(visionSensorHandle)
+        img = np.frombuffer(img, dtype=np.uint8).reshape(resY, resX, 3)
+        img = cv2.flip(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), 0)
+        # cv2.imwrite(f"{script_dir}/images/{img_ind}.jpg", img)
+        # img_ind+=1
+        last_t=t
+        try:
+            x, y = find_object(img)
+            dx=x - img.shape[0]/2
+            print("dx=", dx)
+            setMovement(v, 0, dx/100)
+        except:
+            pass
 
 
     client.step()  # triggers next simulation step
