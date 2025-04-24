@@ -46,18 +46,18 @@ class Obst(Rect):
                     return wall
         else:
             for p in pp:
-                y_left=wall.x-wall.w/2 #левая грань стены
-                if p[0]>y_left and p[0]-y_left<10:
+                x_left=wall.x-wall.w/2 #левая грань стены
+                if p[0]<x_left and x_left-p[0]<10:
                     return wall
-                y_right=wall.x+wall.w/2 #правая грань стены
-                if p[0]<y_right and y_right-p[0]<10:
+                x_right=wall.x+wall.w/2 #правая грань стены
+                if p[0]>x_right and p[0]-x_right<10:
                     return wall
         return None
 
     def sim(self, dt, walls):
         for wall in walls:
             found_wall = self.find_collision_pt(wall)
-            if self.collision_delay == 0 and found_wall:
+            if self.collision_delay < 0.0001 and found_wall:
                 if found_wall.is_vertical:
                     self.vx=-self.vx
                 else:
