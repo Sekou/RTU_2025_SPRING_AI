@@ -29,8 +29,8 @@ class Wall(Rect):
 class Obst(Rect):
     def __init__(self, x, y, w, h):
         super().__init__(x, y, w, h, (0,0,255))
-        self.vx=15
-        self.vy=-15
+        self.vx=25
+        self.vy=-35
         self.collision_delay=0
 
     def find_collision_pt(self, wall):
@@ -56,15 +56,18 @@ class Obst(Rect):
 
     def sim(self, dt, walls):
         for wall in walls:
-            check = self.find_collision_pt(wall)
-            if self.collision_delay ==0 and check:
-                self.vy=-self.vy
+            found_wall = self.find_collision_pt(wall)
+            if self.collision_delay == 0 and found_wall:
+                if found_wall.is_vertical:
+                    self.vx=-self.vx
+                else:
+                    self.vy=-self.vy
                 self.collision_delay=1
             elif self.collision_delay>0:
                 self.collision_delay-=dt
 
         self.x+=self.vx*dt
-        self.y+=self.vx*dt
+        self.y+=self.vy*dt
 
 class Agent(Rect):
     def __init__(self, x, y, sz):
