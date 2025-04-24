@@ -9,6 +9,9 @@ class Rect:
         self.x, self.y, self.w, self.h, self.color=x, y, w, h, color
     def get_pos(self):
         return [self.x, self.y]
+    def get_pts(self):
+        return [[self.x-self.w/2, self.y-self.h/2], [self.x+self.w/2, self.y-self.h/2],
+            [self.x+self.w/2, self.y+self.h/2], [self.x-self.w/2, self.y+self.h/2]]
     def set_pos(self, pos):
         self.x, self.y = [*pos]
     def contains(self, pos):
@@ -34,8 +37,7 @@ class Obst(Rect):
         self.collision_delay=0
 
     def find_collision_pt(self, wall):
-        pp=[[self.x-self.w/2, self.y-self.h/2], [self.x+self.w/2, self.y-self.h/2],
-            [self.x+self.w/2, self.y+self.h/2], [self.x-self.w/2, self.y+self.h/2]]
+        pp=self.get_pts()
         if not wall.is_vertical:
             for p in pp:
                 y_top=wall.y-wall.h/2 #верхняя грань стены
@@ -69,9 +71,19 @@ class Obst(Rect):
         self.x+=self.vx*dt
         self.y+=self.vy*dt
 
+def check_collision(r1, r2):
+    pp1, pp2=r1.get_pts(), r2.get_pts()
+    for p in pp1:
+        if r2.contains(p): return True
+    for p in pp2:
+        if r1.contains(p): return True
+    return False
+
 class Agent(Rect):
     def __init__(self, x, y, sz):
         super().__init__(x, y, sz, sz, (255,0,0))
+    def collides(self, walls, obsts):
+        return any([check_collision(self, o) for o in walls+obsts])
 
 pygame.font.init()
 def drawText(screen, s, x, y, sz=20, color=(0,0,0)): #отрисовка текста
@@ -145,6 +157,9 @@ def main():
             # wall=o.find_collision_pt(walls[2])
             # if wall:
             #     print("Collision")
+
+        if agent.collides(walls, obsts):
+            print("Collision")
 
         screen.fill((255, 255, 255))
 
