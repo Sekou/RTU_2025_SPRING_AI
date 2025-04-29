@@ -51,6 +51,7 @@ class GA:
             print(f"{cr.s} = {cr.fitness:.2f}")
     def calc_fitness(self):
         for cr in self.population:
+            # ЭТОТ ФУНКЦИОНАЛ МОЖНО ИЗМЕНИТЬ ДЛЯ РЕШЕНИЯ ДРУГОЙ ЗАДАЧИ
             cr.fitness=cr.s.count("1")
     def mutate_all(self):
         for cr in self.population:
