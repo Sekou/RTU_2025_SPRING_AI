@@ -3,7 +3,10 @@ from itertools import count
 import numpy as np
 
 def replace_char(s, i, ch_new):
-    return s[:i]+ch_new+s[i:]
+    if i>=len(s): return str(s)
+    s2=ch_new+s[1:] if i==0 else s[:i]+ch_new+s[i+1:]
+    assert len(s2)==len(s), f"str len mismatch {len(s2)}!={len(s)}, repl at {i}"
+    return s2
 
 def basics():
     s1="00000001"
@@ -30,6 +33,8 @@ class Creature:
         cr2=Creature(self.str_len)
         cr1.s = self.s[:i]+other.s[i:]
         cr2.s = other.s[:i]+self.s[i:]
+        assert len(cr1.s)==self.str_len
+        assert len(cr2.s)==self.str_len
         return cr1, cr2
 
 class GA:
@@ -40,6 +45,7 @@ class GA:
             cr=Creature(str_len)
             cr.mutate()
             self.population.append(cr)
+        self.calc_fitness()
     def print_all(self):
         for cr in self.population:
             print(f"{cr.s} = {cr.fitness:.2f}")
@@ -63,14 +69,35 @@ class GA:
             self.population.append(c)
             if len(self.population)<self.num_creatures:
                 self.population.append(d)
+    def get_solution(self):
+        return sorted(self.population, key=lambda cr: cr.fitness, reverse=True)[0]
 
 print("")
 ga=GA(10,8)
-for i in range(5):
-    ga.calc_fitness()
-    ga.print_all()
-    ga.mutate_all()
 
-ga.filter_best()
-print("FILTERED:")
-ga.print_all()
+ii=[]
+ff=[]
+for i in range(1000):
+    print(f"ALL CREATURES ({i}):")
+    ga.print_all()
+    ga.filter_best()
+    print("FILTERED:")
+    ga.print_all()
+    ga.repopulate()
+    ga.mutate_all()
+    ga.calc_fitness()
+    solution = ga.get_solution()
+    ii.append(i)
+    ff.append(solution.fitness)
+    if solution.fitness==8:
+        print(f"Found solution on {i}-th iteration")
+        print(f"SOLUTION: {solution.s}, fitness={solution.fitness}")
+        break
+
+import matplotlib.pyplot as plt
+
+plt.title("Fitness")
+plt.plot(ii, ff)
+plt.show()
+
+
