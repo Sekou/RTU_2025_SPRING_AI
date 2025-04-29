@@ -7,6 +7,7 @@ xx=np.arange(0, 20, 0.1)
 np.random.seed(0)
 yy=[math.sin(x)+np.random.normal(0,0.1) for x in xx]
 
+y=[]
 #метод экспоненциального среднего
 def get_kalman_filter_value(yy, i, win_size):
     P=0.1 #if i==0 else
