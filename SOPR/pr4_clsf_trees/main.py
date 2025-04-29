@@ -59,7 +59,7 @@ class Node:
             for ch in self.childs:
                 ch.split_childs()
     def print_struct(self):
-        indent = "".join(["-  "]*self.level)
+        indent = "-  "*self.level
         print(f"{indent} ({self.level} {self.parent_split_ind} {self.own_H:.2f} {self.arr}) ")
         if self.childs:
             for ch in self.childs:

@@ -84,7 +84,7 @@ class Event: # событие = передикат = действие
     def to_string(self):
         return "; ".join(str(o.id) for o in self.objects)
     def to_string_full(self):
-        pad="".join(["\t"]*self.depth)
+        pad="\t"*self.depth
         s=pad+self.to_string()+"\n"
         for e in self.next_events:
             s+=pad+e.to_string_full()
