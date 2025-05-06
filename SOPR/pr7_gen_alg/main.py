@@ -8,15 +8,15 @@ def replace_char(s, i, ch_new):
     assert len(s2)==len(s), f"str len mismatch {len(s2)}!={len(s)}, repl at {i}"
     return s2
 
-def basics():
+def some_tests():
     s1="00000001"
     s2="00011001"
     print(s1.count("1"))
     print(s2.count("1"))
-    test="a"*7
+    test="a"*8
     print(test)
     print(replace_char(test, 7, "b"))
-basics()
+some_tests()
 
 
 class Creature:
